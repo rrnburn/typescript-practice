@@ -1,0 +1,24 @@
+aws_region                    = "us-east-1"
+table_name                    = "EventHandlerTable"
+environment                   = "dev"
+enable_point_in_time_recovery = false
+enable_ttl                    = false
+
+# SNS Configuration
+sns_topic_name                = "EventHandlerTopic"
+endpoint_url                  = "http://your-server.com:3000/events"
+endpoint_protocol             = "http"
+
+# EC2 Configuration (Free Tier eligible)
+create_ec2_instance           = true
+ec2_instance_type             = "t2.micro"  # Free tier: 750 hours/month for 12 months
+ec2_ami_id                    = "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS in us-east-1
+ec2_key_name                  = "event-handler-key"
+vpc_id                        = ""  # Leave empty to use default VPC
+subnet_id                     = ""  # Leave empty to use default subnet
+app_port                      = 3000
+ssh_allowed_cidr              = ["0.0.0.0/0"]  # Restrict this to your IP!
+app_allowed_cidr              = ["0.0.0.0/0"]
+allocate_elastic_ip           = true
+github_repo_url               = "https://github.com/rrnburn/my-aws-event-handler.git"
+github_branch                 = "main"
