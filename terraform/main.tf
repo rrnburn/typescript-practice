@@ -56,16 +56,14 @@ resource "aws_sns_topic" "event_topic" {
   }
 }
 
-# SNS Subscription to HTTP(S) endpoint
+# SNS Subscription to HTTP(S) endpoint - automatically uses EC2 Elastic IP
 resource "aws_sns_topic_subscription" "http_subscription" {
-  count     = var.endpoint_url != "" ? 1 : 0
+  count     = var.create_ec2_instance && var.allocate_elastic_ip ? 1 : 0
   topic_arn = aws_sns_topic.event_topic.arn
-  protocol  = var.endpoint_protocol
-  endpoint  = var.endpoint_url
+  protocol  = "http"
+  endpoint  = "http://${aws_eip.app_eip[0].public_ip}:${var.app_port}/events"
   
-  # Automatically confirm subscription (only works for HTTPS with valid certificate)
-  # For HTTP, you'll need to manually confirm via the SubscribeURL sent to your endpoint
-  endpoint_auto_confirms = var.endpoint_protocol == "https" ? true : false
+  depends_on = [aws_instance.app_server, aws_eip.app_eip]
 }
 
 # IAM Role for EC2 instance

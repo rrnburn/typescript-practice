@@ -13,24 +13,56 @@ app.get('/health', (req: Request, res: Response) => {
 
 // Event webhook endpoint
 app.post('/events', async (req: Request, res: Response) => {
-  // Handle SNS subscription confirmation
-  if (req.headers['x-amz-sns-message-type'] === 'SubscriptionConfirmation') {
-    console.log('Confirming SNS subscription:', req.body.SubscribeURL);
-    // Visit the SubscribeURL to confirm (or use fetch/axios)
-    return res.status(200).send('OK');
-  }
+  try {
+    // Handle SNS subscription confirmation
+    if (req.headers['x-amz-sns-message-type'] === 'SubscriptionConfirmation') {
+      console.log('Received SNS subscription confirmation');
+      const subscribeUrl = req.body.SubscribeURL;
 
-  // Handle SNS notifications
-  if (req.headers['x-amz-sns-message-type'] === 'Notification') {
-    const message = JSON.parse(req.body.Message);
-    const result = await eventHandler(message);
-    return res.status(200).json({ success: true, result });
-  }
+      if (subscribeUrl) {
+        console.log('Confirming subscription:', subscribeUrl);
+        // Visit the URL to confirm
+        const https = require('https');
+        const http = require('http');
+        const client = subscribeUrl.startsWith('https') ? https : http;
 
-  // Handle regular events (non-SNS)
-  const event = req.body;
-  const result = await eventHandler(event);
-  res.status(200).json({ success: true, result });
+        client.get(subscribeUrl, (response: any) => {
+          console.log('Subscription confirmed!');
+        }).on('error', (err: any) => {
+          console.error('Error confirming subscription:', err);
+        });
+      }
+
+      return res.status(200).send('OK');
+    }
+
+    // Handle SNS notifications
+    if (req.headers['x-amz-sns-message-type'] === 'Notification') {
+      console.log('Received SNS notification');
+      const message = JSON.parse(req.body.Message);
+      const result = await eventHandler(message);
+      return res.status(200).json({ success: true, result });
+    }
+
+    // Handle regular direct API calls (non-SNS)
+    const event = req.body;
+    console.log('Received event:', event);
+
+    const result = await eventHandler(event);
+
+    res.status(200).json({
+      success: true,
+      message: 'Event processed successfully',
+      result,
+    });
+  } catch (error) {
+    console.error('Error processing event:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing event',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 app.listen(PORT, () => {
