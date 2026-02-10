@@ -14,28 +14,38 @@ app.get('/health', (req: Request, res: Response) => {
 // Event webhook endpoint
 app.post('/events', async (req: Request, res: Response) => {
   try {
+    // Log everything for debugging
+    console.log('Request headers:', req.headers);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     // Handle SNS subscription confirmation
     if (req.headers['x-amz-sns-message-type'] === 'SubscriptionConfirmation') {
       console.log('Received SNS subscription confirmation');
-      const subscribeUrl = req.body.SubscribeURL;
+      
+      // Try different property names (SNS can be inconsistent with casing)
+      const subscribeUrl = req.body.SubscribeURL || req.body.subscribeUrl || req.body.SubscribeUrl;
+      
+      console.log('Subscribe URL:', subscribeUrl);
 
       if (subscribeUrl) {
         console.log('Confirming subscription:', subscribeUrl);
-        // Visit the URL to confirm
+        
         const https = require('https');
         const http = require('http');
         const client = subscribeUrl.startsWith('https') ? https : http;
 
         client.get(subscribeUrl, (response: any) => {
-          console.log('Subscription confirmed!');
+          console.log('Subscription confirmed! Status:', response.statusCode);
         }).on('error', (err: any) => {
           console.error('Error confirming subscription:', err);
         });
+      } else {
+        console.error('No SubscribeURL found in body:', Object.keys(req.body));
       }
 
       return res.status(200).send('OK');
     }
-
+    
     // Handle SNS notifications
     if (req.headers['x-amz-sns-message-type'] === 'Notification') {
       console.log('Received SNS notification');
