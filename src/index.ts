@@ -5,6 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.text({ type: 'text/plain' })); // Add this to parse SNS text/plain messages
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -14,16 +15,24 @@ app.get('/health', (req: Request, res: Response) => {
 // Event webhook endpoint
 app.post('/events', async (req: Request, res: Response) => {
   try {
-    // Log everything for debugging
+    // Parse body if it's a string (SNS sends text/plain)
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        console.error('Failed to parse body as JSON:', e);
+      }
+    }
+    
     console.log('Request headers:', req.headers);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request body:', JSON.stringify(body, null, 2));
     
     // Handle SNS subscription confirmation
     if (req.headers['x-amz-sns-message-type'] === 'SubscriptionConfirmation') {
       console.log('Received SNS subscription confirmation');
       
-      // Try different property names (SNS can be inconsistent with casing)
-      const subscribeUrl = req.body.SubscribeURL || req.body.subscribeUrl || req.body.SubscribeUrl;
+      const subscribeUrl = body.SubscribeURL || body.subscribeUrl || body.SubscribeUrl;
       
       console.log('Subscribe URL:', subscribeUrl);
 
@@ -40,7 +49,7 @@ app.post('/events', async (req: Request, res: Response) => {
           console.error('Error confirming subscription:', err);
         });
       } else {
-        console.error('No SubscribeURL found in body:', Object.keys(req.body));
+        console.error('No SubscribeURL found in body:', Object.keys(body));
       }
 
       return res.status(200).send('OK');
@@ -49,16 +58,15 @@ app.post('/events', async (req: Request, res: Response) => {
     // Handle SNS notifications
     if (req.headers['x-amz-sns-message-type'] === 'Notification') {
       console.log('Received SNS notification');
-      const message = JSON.parse(req.body.Message);
+      const message = JSON.parse(body.Message);
       const result = await eventHandler(message);
       return res.status(200).json({ success: true, result });
     }
 
     // Handle regular direct API calls (non-SNS)
-    const event = req.body;
-    console.log('Received event:', event);
+    console.log('Received event:', body);
 
-    const result = await eventHandler(event);
+    const result = await eventHandler(body);
 
     res.status(200).json({
       success: true,
