@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Handler Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card h2 {
+      color: #555;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    select, input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    textarea {
+      min-height: 120px;
+      font-family: monospace;
+    }
+    
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    button:hover {
+      background: #0056b3;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .button-secondary {
+      background: #6c757d;
+    }
+    
+    .button-secondary:hover {
+      background: #545b62;
+    }
+    
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 15px;
+      display: none;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+    
+    .response {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 15px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .health-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .health-indicator.healthy {
+      background: #28a745;
+    }
+    
+    .health-indicator.unhealthy {
+      background: #dc3545;
+    }
+    
+    .health-indicator.unknown {
+      background: #ffc107;
+    }
+    
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .quick-action {
+      padding: 10px;
+      text-align: center;
+      background: #e9ecef;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .quick-action:hover {
+      background: #dee2e6;
+    }
+    
+    .quick-action .icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Event Handler Dashboard</h1>
+    
+    <!-- Health Status -->
+    <div class="card">
+      <h2>Service Status</h2>
+      <p>
+        <span id="healthIndicator" class="health-indicator unknown"></span>
+        <span id="healthStatus">Checking...</span>
+      </p>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+      <h2>Quick Actions</h2>
+      <div class="quick-actions">
+        <div class="quick-action" onclick="loadTemplate('put')">
+          <div class="icon">📝</div>
+          <div>Put Item</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('get')">
+          <div class="icon">🔍</div>
+          <div>Get Item</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('query')">
+          <div class="icon">📋</div>
+          <div>Query Items</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('delete')">
+          <div class="icon">🗑️</div>
+          <div>Delete Item</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Event Form -->
+    <div class="card">
+      <h2>Send Event</h2>
+      <form id="eventForm">
+        <div class="form-group">
+          <label for="action">Action</label>
+          <select id="action" onchange="updatePayloadTemplate()">
+            <option value="put">Put Item</option>
+            <option value="get">Get Item</option>
+            <option value="query">Query Items</option>
+            <option value="delete">Delete Item</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="tableName">Table Name</label>
+          <input type="text" id="tableName" value="EventHandlerTable">
+        </div>
+        
+        <div class="form-group">
+          <label for="payload">Payload (JSON)</label>
+          <textarea id="payload">{
+  "id": "test-001",
+  "name": "Test Item",
+  "timestamp": 1707580800
+}</textarea>
+        </div>
+        
+        <div class="button-group">
+          <button type="submit" id="submitBtn">Send Event</button>
+          <button type="button" class="button-secondary" onclick="formatPayload()">Format JSON</button>
+          <button type="button" class="button-secondary" onclick="clearForm()">Clear</button>
+        </div>
+      </form>
+      
+      <div id="status" class="status"></div>
+    </div>
+    
+    <!-- Response -->
+    <div class="card">
+      <h2>Response</h2>
+      <div id="response" class="response">No response yet. Send an event to see the result.</div>
+    </div>
+    
+    <!-- History -->
+    <div class="card">
+      <h2>Recent Events</h2>
+      <div id="history">No events sent yet.</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let eventHistory = [];
+
+    // Check health on load
+    checkHealth();
+    setInterval(checkHealth, 30000);
+
+    async function checkHealth() {
+      const indicator = document.getElementById('healthIndicator');
+      const status = document.getElementById('healthStatus');
+      
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const data = await response.json();
+        
+        if (data.status === 'healthy') {
+          indicator.className = 'health-indicator healthy';
+          status.textContent = 'Healthy';
+        } else {
+          indicator.className = 'health-indicator unhealthy';
+          status.textContent = 'Unhealthy';
+        }
+      } catch (e) {
+        indicator.className = 'health-indicator unhealthy';
+        status.textContent = 'Connection Failed';
+      }
+    }
+
+    function loadTemplate(action) {
+      document.getElementById('action').value = action;
+      updatePayloadTemplate();
+    }
+
+    function updatePayloadTemplate() {
+      const action = document.getElementById('action').value;
+      const payloadField = document.getElementById('payload');
+      
+      const templates = {
+        put: {
+          id: 'test-' + Date.now(),
+          name: 'Test Item',
+          timestamp: Math.floor(Date.now() / 1000)
+        },
+        get: {
+          id: 'test-001'
+        },
+        query: {
+          expression: 'id = :id',
+          values: { ':id': 'test-001' }
+        },
+        delete: {
+          id: 'test-001'
+        }
+      };
+      
+      payloadField.value = JSON.stringify(templates[action], null, 2);
+    }
+
+    function formatPayload() {
+      const payloadField = document.getElementById('payload');
+      try {
+        const parsed = JSON.parse(payloadField.value);
+        payloadField.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        showStatus('Invalid JSON: ' + e.message, 'error');
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('payload').value = '';
+      document.getElementById('response').textContent = 'No response yet.';
+      document.getElementById('status').className = 'status';
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+    }
+
+    function addToHistory(event, response, success) {
+      eventHistory.unshift({
+        timestamp: new Date().toISOString(),
+        event,
+        response,
+        success
+      });
+      
+      // Keep only last 10
+      eventHistory = eventHistory.slice(0, 10);
+      
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const historyDiv = document.getElementById('history');
+      
+      if (eventHistory.length === 0) {
+        historyDiv.textContent = 'No events sent yet.';
+        return;
+      }
+      
+      historyDiv.innerHTML = eventHistory.map((item, i) => `
+        <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" 
+             onclick="showHistoryItem(${i})">
+          <span style="color: ${item.success ? '#28a745' : '#dc3545'}">
+            ${item.success ? '✓' : '✗'}
+          </span>
+          <strong>${item.event.action}</strong>
+          <span style="color: #999; font-size: 12px;">
+            ${new Date(item.timestamp).toLocaleTimeString()}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    function showHistoryItem(index) {
+      const item = eventHistory[index];
+      document.getElementById('action').value = item.event.action;
+      document.getElementById('tableName').value = item.event.payload.tableName;
+      
+      // Show the payload without tableName
+      const payloadWithoutTable = { ...item.event.payload };
+      delete payloadWithoutTable.tableName;
+      document.getElementById('payload').value = JSON.stringify(
+        item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
+        null, 2
+      );
+      
+      document.getElementById('response').textContent = JSON.stringify(item.response, null, 2);
+    }
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      
+      try {
+        const action = document.getElementById('action').value;
+        const tableName = document.getElementById('tableName').value;
+        let payloadData = JSON.parse(document.getElementById('payload').value);
+        
+        // Build the full event
+        const event = {
+          action,
+          payload: {
+            tableName
+          }
+        };
+        
+        // Add payload based on action type
+        if (action === 'put') {
+          event.payload.item = payloadData;
+        } else if (action === 'get' || action === 'delete') {
+          event.payload.key = payloadData;
+        } else if (action === 'query') {
+          event.payload.keyCondition = payloadData;
+        }
+        
+        const response = await fetch(`${API_BASE}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(event)
+        });
+        
+        const data = await response.json();
+        
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (response.ok) {
+          showStatus('Event sent successfully!', 'success');
+          addToHistory(event, data, true);
+        } else {
+          showStatus('Error: ' + (data.message || 'Unknown error'), 'error');
+          addToHistory(event, data, false);
+        }
+      } catch (error) {
+        showStatus('Error: ' + error.message, 'error');
+        document.getElementById('response').textContent = error.message;
+        addToHistory({ action: document.getElementById('action').value }, { error: error.message }, false);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Event';
+      }
+    });
+  </script>
+</body>
+</html>
