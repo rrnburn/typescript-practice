@@ -57,3 +57,13 @@ output "ssh_command" {
   description = "SSH command to connect to the instance"
   value       = length(aws_instance.app_server) > 0 ? "ssh -i ~/.ssh/${var.ec2_key_name}.pem ubuntu@${length(aws_eip.app_eip) > 0 ? aws_eip.app_eip[0].public_ip : aws_instance.app_server[0].public_ip}" : "No EC2 instance created"
 }
+
+output "cloudwatch_log_group" {
+  description = "CloudWatch Log Group name for application logs"
+  value       = aws_cloudwatch_log_group.app_logs.name
+}
+
+output "cloudwatch_logs_url" {
+  description = "URL to view CloudWatch logs in AWS Console"
+  value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#logsV2:log-groups/log-group/${replace(aws_cloudwatch_log_group.app_logs.name, "/", "$252F")}"
+}

@@ -114,6 +114,40 @@ resource "aws_iam_role_policy" "dynamodb_policy" {
   })
 }
 
+# IAM Policy for CloudWatch Logs access
+resource "aws_iam_role_policy" "cloudwatch_policy" {
+  name = "cloudwatch-logs-access"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:*:log-group:/aws/ec2/event-handler*"
+      }
+    ]
+  })
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "app_logs" {
+  name              = "/aws/ec2/event-handler"
+  retention_in_days = 7  # Free tier: 5 GB storage
+
+  tags = {
+    Name        = "event-handler-logs"
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+  }
+}
+
 # IAM Instance Profile
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.environment}-event-handler-profile"
