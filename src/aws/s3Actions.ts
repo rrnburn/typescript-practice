@@ -1,6 +1,9 @@
 import { S3Client, ListBucketsCommand, ListObjectsCommand, GetObjectCommand, PutObjectCommand, CreateBucketCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
-const s3 = new S3Client({ apiVersion: "2006-03-01" });
+const s3 = new S3Client({ 
+  region: process.env.AWS_REGION || 'us-east-1',
+  apiVersion: "2006-03-01" 
+});
 
 export const s3Actions = {
   async handleS3Get(payload: any): Promise<any> {
@@ -36,7 +39,7 @@ export const s3Actions = {
 };
 
 async function createBucket(payload: any): Promise<any> {
-    const { bucketName } = payload;
+    const { bucketName } = payload.bucketName;
     const response = await s3.send(new CreateBucketCommand({
       Bucket: bucketName
     }));

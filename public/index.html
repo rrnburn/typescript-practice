@@ -273,11 +273,6 @@
           <input type="text" id="tableName" value="EventHandlerTable">
         </div>
         
-        <div class="form-group" id="bucketNameGroup" style="display: none;">
-          <label for="bucketName">Bucket Name</label>
-          <input type="text" id="bucketName" value="my-test-bucket">
-        </div>
-        
         <div class="form-group">
           <label for="payload">Payload (JSON)</label>
           <textarea id="payload">{
@@ -350,7 +345,6 @@
       const eventType = document.getElementById('eventType').value;
       const actionSelect = document.getElementById('action');
       const tableNameGroup = document.getElementById('tableNameGroup');
-      const bucketNameGroup = document.getElementById('bucketNameGroup');
       
       if (eventType === 'dynamo') {
         actionSelect.innerHTML = `
@@ -360,7 +354,6 @@
           <option value="delete">Delete Item</option>
         `;
         tableNameGroup.style.display = 'block';
-        bucketNameGroup.style.display = 'none';
       } else if (eventType === 's3') {
         actionSelect.innerHTML = `
           <option value="listBuckets">List Buckets</option>
@@ -371,7 +364,6 @@
           <option value="deleteObject">Delete Object</option>
         `;
         tableNameGroup.style.display = 'none';
-        bucketNameGroup.style.display = 'block';
       }
       
       updatePayloadTemplate();
@@ -401,17 +393,26 @@
       };
       
       const s3Templates = {
-        listBuckets: {},
-        createBucket: {},
-        listObjects: {},
+        listBuckets: {
+          // No parameters needed - lists all buckets in account
+        },
+        createBucket: {
+          bucketName: 'my-test-bucket-' + Date.now()
+        },
+        listObjects: {
+          bucketName: 'my-test-bucket'
+        },
         putObject: {
-          objectKey: 'test-file.txt',
-          body: 'Hello, S3!'
+          bucketName: 'my-test-bucket',
+          objectKey: 'test-file-' + Date.now() + '.txt',
+          body: 'Hello, S3! This is test content.'
         },
         getObject: {
+          bucketName: 'my-test-bucket',
           objectKey: 'test-file.txt'
         },
         deleteObject: {
+          bucketName: 'my-test-bucket',
           objectKey: 'test-file.txt'
         }
       };
@@ -420,15 +421,6 @@
       payloadField.value = JSON.stringify(template, null, 2);
     }
 
-    function formatPayload() {
-      const payloadField = document.getElementById('payload');
-      try {
-        const parsed = JSON.parse(payloadField.value);
-        payloadField.value = JSON.stringify(parsed, null, 2);
-      } catch (e) {
-        showStatus('Invalid JSON: ' + e.message, 'error');
-      }
-    }
     function formatPayload() {
       const payloadField = document.getElementById('payload');
       try {
@@ -503,12 +495,8 @@
           null, 2
         );
       } else if (item.event.type === 's3') {
-        if (item.event.payload.bucketName) {
-          document.getElementById('bucketName').value = item.event.payload.bucketName;
-        }
-        // Show the payload without bucketName and action
+        // Show the payload without action
         const payloadWithoutMeta = { ...item.event.payload };
-        delete payloadWithoutMeta.bucketName;
         delete payloadWithoutMeta.action;
         document.getElementById('payload').value = JSON.stringify(payloadWithoutMeta, null, 2);
       }
@@ -549,29 +537,22 @@
             event.payload.keyCondition = payloadData;
           }
         } else if (eventType === 's3') {
-          const bucketName = document.getElementById('bucketName').value;
-          
           // Map actions to S3 handler actions
           if (action === 'listBuckets' || action === 'listObjects' || action === 'getObject') {
             event.action = 'get';
             event.payload = { 
               action,
-              ...(action !== 'listBuckets' && { bucketName }),
               ...payloadData
             };
           } else if (action === 'createBucket' || action === 'putObject') {
             event.action = 'put';
             event.payload = { 
               action,
-              bucketName,
               ...payloadData
             };
           } else if (action === 'deleteObject') {
             event.action = 'delete';
-            event.payload = { 
-              bucketName,
-              ...payloadData
-            };
+            event.payload = payloadData;
           }
         }
         
