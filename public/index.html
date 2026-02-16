@@ -192,25 +192,56 @@
       </p>
     </div>
     
-    <!-- Quick Actions -->
+    <!-- Quick Actions - DynamoDB -->
     <div class="card">
-      <h2>Quick Actions</h2>
+      <h2>Quick Actions - DynamoDB</h2>
       <div class="quick-actions">
-        <div class="quick-action" onclick="loadTemplate('put')">
+        <div class="quick-action" onclick="loadTemplate('dynamo', 'put')">
           <div class="icon">📝</div>
           <div>Put Item</div>
         </div>
-        <div class="quick-action" onclick="loadTemplate('get')">
+        <div class="quick-action" onclick="loadTemplate('dynamo', 'get')">
           <div class="icon">🔍</div>
           <div>Get Item</div>
         </div>
-        <div class="quick-action" onclick="loadTemplate('query')">
+        <div class="quick-action" onclick="loadTemplate('dynamo', 'query')">
           <div class="icon">📋</div>
           <div>Query Items</div>
         </div>
-        <div class="quick-action" onclick="loadTemplate('delete')">
+        <div class="quick-action" onclick="loadTemplate('dynamo', 'delete')">
           <div class="icon">🗑️</div>
           <div>Delete Item</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Quick Actions - S3 -->
+    <div class="card">
+      <h2>Quick Actions - S3</h2>
+      <div class="quick-actions">
+        <div class="quick-action" onclick="loadTemplate('s3', 'listBuckets')">
+          <div class="icon">📦</div>
+          <div>List Buckets</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('s3', 'createBucket')">
+          <div class="icon">➕</div>
+          <div>Create Bucket</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('s3', 'listObjects')">
+          <div class="icon">📄</div>
+          <div>List Objects</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('s3', 'putObject')">
+          <div class="icon">⬆️</div>
+          <div>Put Object</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('s3', 'getObject')">
+          <div class="icon">⬇️</div>
+          <div>Get Object</div>
+        </div>
+        <div class="quick-action" onclick="loadTemplate('s3', 'deleteObject')">
+          <div class="icon">🗑️</div>
+          <div>Delete Object</div>
         </div>
       </div>
     </div>
@@ -219,6 +250,14 @@
     <div class="card">
       <h2>Send Event</h2>
       <form id="eventForm">
+        <div class="form-group">
+          <label for="eventType">Event Type</label>
+          <select id="eventType" onchange="updateActionOptions()">
+            <option value="dynamo">DynamoDB</option>
+            <option value="s3">S3</option>
+          </select>
+        </div>
+        
         <div class="form-group">
           <label for="action">Action</label>
           <select id="action" onchange="updatePayloadTemplate()">
@@ -229,9 +268,14 @@
           </select>
         </div>
         
-        <div class="form-group">
+        <div class="form-group" id="tableNameGroup">
           <label for="tableName">Table Name</label>
           <input type="text" id="tableName" value="EventHandlerTable">
+        </div>
+        
+        <div class="form-group" id="bucketNameGroup" style="display: none;">
+          <label for="bucketName">Bucket Name</label>
+          <input type="text" id="bucketName" value="my-test-bucket">
         </div>
         
         <div class="form-group">
@@ -295,16 +339,50 @@
       }
     }
 
-    function loadTemplate(action) {
+    function loadTemplate(type, action) {
+      document.getElementById('eventType').value = type;
+      updateActionOptions();
       document.getElementById('action').value = action;
       updatePayloadTemplate();
     }
 
+    function updateActionOptions() {
+      const eventType = document.getElementById('eventType').value;
+      const actionSelect = document.getElementById('action');
+      const tableNameGroup = document.getElementById('tableNameGroup');
+      const bucketNameGroup = document.getElementById('bucketNameGroup');
+      
+      if (eventType === 'dynamo') {
+        actionSelect.innerHTML = `
+          <option value="put">Put Item</option>
+          <option value="get">Get Item</option>
+          <option value="query">Query Items</option>
+          <option value="delete">Delete Item</option>
+        `;
+        tableNameGroup.style.display = 'block';
+        bucketNameGroup.style.display = 'none';
+      } else if (eventType === 's3') {
+        actionSelect.innerHTML = `
+          <option value="listBuckets">List Buckets</option>
+          <option value="createBucket">Create Bucket</option>
+          <option value="listObjects">List Objects</option>
+          <option value="putObject">Put Object</option>
+          <option value="getObject">Get Object</option>
+          <option value="deleteObject">Delete Object</option>
+        `;
+        tableNameGroup.style.display = 'none';
+        bucketNameGroup.style.display = 'block';
+      }
+      
+      updatePayloadTemplate();
+    }
+
     function updatePayloadTemplate() {
+      const eventType = document.getElementById('eventType').value;
       const action = document.getElementById('action').value;
       const payloadField = document.getElementById('payload');
       
-      const templates = {
+      const dynamoTemplates = {
         put: {
           id: 'test-' + Date.now(),
           name: 'Test Item',
@@ -322,7 +400,24 @@
         }
       };
       
-      payloadField.value = JSON.stringify(templates[action], null, 2);
+      const s3Templates = {
+        listBuckets: {},
+        createBucket: {},
+        listObjects: {},
+        putObject: {
+          objectKey: 'test-file.txt',
+          body: 'Hello, S3!'
+        },
+        getObject: {
+          objectKey: 'test-file.txt'
+        },
+        deleteObject: {
+          objectKey: 'test-file.txt'
+        }
+      };
+      
+      const template = eventType === 'dynamo' ? dynamoTemplates[action] : s3Templates[action];
+      payloadField.value = JSON.stringify(template, null, 2);
     }
 
     function formatPayload() {
@@ -334,16 +429,29 @@
         showStatus('Invalid JSON: ' + e.message, 'error');
       }
     }
-
-    function clearForm() {
-      document.getElementById('payload').value = '';
-      document.getElementById('response').textContent = 'No response yet.';
-      document.getElementById('status').className = 'status';
-    }
-
-    function showStatus(message, type) {
-      const status = document.getElementById('status');
-      status.textContent = message;
+eventType').value = item.event.type;
+      updateActionOptions();
+      document.getElementById('action').value = item.event.action;
+      
+      if (item.event.type === 'dynamo') {
+        document.getElementById('tableName').value = item.event.payload.tableName;
+        // Show the payload without tableName
+        const payloadWithoutTable = { ...item.event.payload };
+        delete payloadWithoutTable.tableName;
+        document.getElementById('payload').value = JSON.stringify(
+          item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
+          null, 2
+        );
+      } else if (item.event.type === 's3') {
+        if (item.event.payload.bucketName) {
+          document.getElementById('bucketName').value = item.event.payload.bucketName;
+        }
+        // Show the payload without bucketName and action
+        const payloadWithoutMeta = { ...item.event.payload };
+        delete payloadWithoutMeta.bucketName;
+        delete payloadWithoutMeta.action;
+        document.getElementById('payload').value = JSON.stringify(payloadWithoutMeta, null, 2);
+      }atus.textContent = message;
       status.className = `status ${type}`;
     }
 
@@ -394,38 +502,55 @@
       document.getElementById('payload').value = JSON.stringify(
         item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
         null, 2
-      );
-      
-      document.getElementById('response').textContent = JSON.stringify(item.response, null, 2);
-    }
-
-    document.getElementById('eventForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Sending...';
-      
-      try {
+      );eventType = document.getElementById('eventType').value;
         const action = document.getElementById('action').value;
-        const tableName = document.getElementById('tableName').value;
         let payloadData = JSON.parse(document.getElementById('payload').value);
         
         // Build the full event
         const event = {
-          action,
-          payload: {
-            tableName
-          }
+          type: eventType,
+          action: '',
+          payload: {}
         };
         
-        // Add payload based on action type
-        if (action === 'put') {
-          event.payload.item = payloadData;
-        } else if (action === 'get' || action === 'delete') {
-          event.payload.key = payloadData;
-        } else if (action === 'query') {
-          event.payload.keyCondition = payloadData;
+        if (eventType === 'dynamo') {
+          const tableName = document.getElementById('tableName').value;
+          event.action = action;
+          event.payload = { tableName };
+          
+          // Add payload based on action type
+          if (action === 'put') {
+            event.payload.item = payloadData;
+          } else if (action === 'get' || action === 'delete') {
+            event.payload.key = payloadData;
+          } else if (action === 'query') {
+            event.payload.keyCondition = payloadData;
+          }
+        } else if (eventType === 's3') {
+          const bucketName = document.getElementById('bucketName').value;
+          
+          // Map actions to S3 handler actions
+          if (action === 'listBuckets' || action === 'listObjects' || action === 'getObject') {
+            event.action = 'get';
+            event.payload = { 
+              action,
+              ...(action !== 'listBuckets' && { bucketName }),
+              ...payloadData
+            };
+          } else if (action === 'createBucket' || action === 'putObject') {
+            event.action = 'put';
+            event.payload = { 
+              action,
+              bucketName,
+              ...payloadData
+            };
+          } else if (action === 'deleteObject') {
+            event.action = 'delete';
+            event.payload = { 
+              bucketName,
+              ...payloadData
+            };
+          }
         }
         
         const response = await fetch(`${API_BASE}/events`, {
@@ -438,6 +563,19 @@
         
         const data = await response.json();
         
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (response.ok) {
+          showStatus('Event sent successfully!', 'success');
+          addToHistory(event, data, true);
+        } else {
+          showStatus('Error: ' + (data.message || 'Unknown error'), 'error');
+          addToHistory(event, data, false);
+        }
+      } catch (error) {
+        showStatus('Error: ' + error.message, 'error');
+        document.getElementById('response').textContent = error.message;
+        addToHistory({ type: document.getElementById('eventType').value,
         document.getElementById('response').textContent = JSON.stringify(data, null, 2);
         
         if (response.ok) {
