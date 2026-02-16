@@ -429,29 +429,25 @@
         showStatus('Invalid JSON: ' + e.message, 'error');
       }
     }
-eventType').value = item.event.type;
-      updateActionOptions();
-      document.getElementById('action').value = item.event.action;
-      
-      if (item.event.type === 'dynamo') {
-        document.getElementById('tableName').value = item.event.payload.tableName;
-        // Show the payload without tableName
-        const payloadWithoutTable = { ...item.event.payload };
-        delete payloadWithoutTable.tableName;
-        document.getElementById('payload').value = JSON.stringify(
-          item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
-          null, 2
-        );
-      } else if (item.event.type === 's3') {
-        if (item.event.payload.bucketName) {
-          document.getElementById('bucketName').value = item.event.payload.bucketName;
-        }
-        // Show the payload without bucketName and action
-        const payloadWithoutMeta = { ...item.event.payload };
-        delete payloadWithoutMeta.bucketName;
-        delete payloadWithoutMeta.action;
-        document.getElementById('payload').value = JSON.stringify(payloadWithoutMeta, null, 2);
-      }atus.textContent = message;
+    function formatPayload() {
+      const payloadField = document.getElementById('payload');
+      try {
+        const parsed = JSON.parse(payloadField.value);
+        payloadField.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        showStatus('Invalid JSON: ' + e.message, 'error');
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('payload').value = '';
+      document.getElementById('response').textContent = 'No response yet.';
+      document.getElementById('status').className = 'status';
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
       status.className = `status ${type}`;
     }
 
@@ -493,16 +489,42 @@ eventType').value = item.event.type;
 
     function showHistoryItem(index) {
       const item = eventHistory[index];
+      document.getElementById('eventType').value = item.event.type;
+      updateActionOptions();
       document.getElementById('action').value = item.event.action;
-      document.getElementById('tableName').value = item.event.payload.tableName;
       
-      // Show the payload without tableName
-      const payloadWithoutTable = { ...item.event.payload };
-      delete payloadWithoutTable.tableName;
-      document.getElementById('payload').value = JSON.stringify(
-        item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
-        null, 2
-      );eventType = document.getElementById('eventType').value;
+      if (item.event.type === 'dynamo') {
+        document.getElementById('tableName').value = item.event.payload.tableName;
+        // Show the payload without tableName
+        const payloadWithoutTable = { ...item.event.payload };
+        delete payloadWithoutTable.tableName;
+        document.getElementById('payload').value = JSON.stringify(
+          item.event.action === 'put' ? payloadWithoutTable.item : payloadWithoutTable.key || payloadWithoutTable,
+          null, 2
+        );
+      } else if (item.event.type === 's3') {
+        if (item.event.payload.bucketName) {
+          document.getElementById('bucketName').value = item.event.payload.bucketName;
+        }
+        // Show the payload without bucketName and action
+        const payloadWithoutMeta = { ...item.event.payload };
+        delete payloadWithoutMeta.bucketName;
+        delete payloadWithoutMeta.action;
+        document.getElementById('payload').value = JSON.stringify(payloadWithoutMeta, null, 2);
+      }
+      
+      document.getElementById('response').textContent = JSON.stringify(item.response, null, 2);
+    }
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      
+      try {
+        const eventType = document.getElementById('eventType').value;
         const action = document.getElementById('action').value;
         let payloadData = JSON.parse(document.getElementById('payload').value);
         
@@ -575,20 +597,7 @@ eventType').value = item.event.type;
       } catch (error) {
         showStatus('Error: ' + error.message, 'error');
         document.getElementById('response').textContent = error.message;
-        addToHistory({ type: document.getElementById('eventType').value,
-        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
-        
-        if (response.ok) {
-          showStatus('Event sent successfully!', 'success');
-          addToHistory(event, data, true);
-        } else {
-          showStatus('Error: ' + (data.message || 'Unknown error'), 'error');
-          addToHistory(event, data, false);
-        }
-      } catch (error) {
-        showStatus('Error: ' + error.message, 'error');
-        document.getElementById('response').textContent = error.message;
-        addToHistory({ action: document.getElementById('action').value }, { error: error.message }, false);
+        addToHistory({ type: document.getElementById('eventType').value, action: document.getElementById('action').value }, { error: error.message }, false);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Send Event';
