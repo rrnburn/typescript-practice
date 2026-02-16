@@ -77,6 +77,43 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'healthy' });
 });
 
+// Download S3 object endpoint
+app.get('/download/s3/:bucketName/:objectKey(*)', async (req: Request, res: Response) => {
+  try {
+    const { bucketName, objectKey } = req.params;
+    console.log(`Downloading object: ${objectKey} from bucket: ${bucketName}`);
+    
+    const event = {
+      type: 's3',
+      action: 'get',
+      payload: {
+        action: 'getObject',
+        bucketName,
+        objectKey
+      }
+    };
+    
+    const result = await eventHandler(event);
+    
+    if (result && result.isBase64 && result.Body) {
+      const buffer = Buffer.from(result.Body, 'base64');
+      const filename = objectKey.split('/').pop() || 'download';
+      
+      res.setHeader('Content-Type', result.ContentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
+    } else {
+      res.status(500).json({ error: 'Failed to retrieve object' });
+    }
+  } catch (error) {
+    console.error('Error downloading object:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Event webhook endpoint
 app.post('/events', async (req: Request, res: Response) => {
   try {

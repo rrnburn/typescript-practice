@@ -112,5 +112,22 @@ async function getObject(bucketName: string, objectKey: string): Promise<any> {
     const s3Client = await getS3ClientForBucket(bucketName);
     const command = new GetObjectCommand({ Bucket: bucketName, Key: objectKey });
     const response = await s3Client.send(command);
-    return response.Body;
+    
+    // Convert stream to base64 for download
+    if (response.Body) {
+        const bodyBytes = await response.Body.transformToByteArray();
+        const base64Content = Buffer.from(bodyBytes).toString('base64');
+        
+        return {
+            bucketName,
+            objectKey,
+            ContentType: response.ContentType || 'application/octet-stream',
+            ContentLength: response.ContentLength,
+            LastModified: response.LastModified,
+            Body: base64Content,
+            isBase64: true
+        };
+    }
+    
+    return response;
 };
