@@ -114,6 +114,48 @@ resource "aws_iam_role_policy" "dynamodb_policy" {
   })
 }
 
+# IAM Policy for S3 access
+resource "aws_iam_role_policy" "s3_policy" {
+  name = "s3-access"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListAllMyBuckets",
+          "s3:GetBucketLocation"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket",
+          "s3:DeleteBucket",
+          "s3:ListBucket",
+          "s3:GetBucketAcl",
+          "s3:GetBucketLocation"
+        ]
+        Resource = "arn:aws:s3:::*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:GetObjectAcl",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "arn:aws:s3:::*/*"
+      }
+    ]
+  })
+}
+
 # IAM Policy for CloudWatch Logs access
 resource "aws_iam_role_policy" "cloudwatch_policy" {
   name = "cloudwatch-logs-access"
